@@ -2,23 +2,21 @@ import numpy as np
 import pandas as pd
 
 # Load the training and validation datasets
-train_data = pd.read_csv('data/train.csv')
-validate_data = pd.read_csv('data/validate.csv')
+train_data = pd.read_csv('data/train.csv', header=None)
+validate_data = pd.read_csv('data/validate.csv', header=None)
 
 # Separate the features and labels
 X_train = train_data.iloc[:, 1:].values
-y_train = train_data.iloc[:, 0].values
+y_train = train_data.iloc[:, 0].values - 1
 X_validate = validate_data.iloc[:, 1:].values
-y_validate = validate_data.iloc[:, 0].values
+y_validate = validate_data.iloc[:, 0].values - 1
 
-y_train = y_train - 1
-y_validate = y_validate - 1
+# y_train = y_train - 1
+# y_validate = y_validate - 1
 
 # Convert labels to one-hot encoding
-num_classes = len(np.unique(y_train))
-
-y_train_encoded = np.eye(num_classes)[y_train]
-y_validate_encoded = np.eye(num_classes)[y_validate]
+y_train_encoded = np.eye(10)[y_train]
+y_validate_encoded = np.eye(10)[y_validate]
 
 
 def sigmoid(x):
@@ -79,18 +77,16 @@ class NeuralNetwork2:
     def train(self, X, y, num_epochs, learning_rate, batch_size):
         for epoch in range(num_epochs):
             # Shuffle the training data
-            # indices = np.random.permutation(X.shape[0])
-            indices = np.arange(X.shape[0])
+            indices = np.random.permutation(X.shape[0])
             X_shuffled = X[indices]
             y_shuffled = y[indices]
 
             # Divide the data into mini-batches
             num_batches = X.shape[0] // batch_size
-            for i in range(num_batches):
-                start = i * batch_size
-                end = (i + 1) * batch_size
-                X_batch = X_shuffled[start:end]
-                y_batch = y_shuffled[start:end]
+            for batch_start in range(0, X.shape[0], batch_size):
+                batch_end = batch_start + batch_size
+                X_batch = X_shuffled[batch_start:batch_end]
+                y_batch = y_shuffled[batch_start:batch_end]
 
                 # Forward pass
                 output = self.forward(X_batch)
@@ -103,7 +99,7 @@ class NeuralNetwork2:
             if epoch % 5 == 0:
                 validate_predictions = self.predict(X_validate)
                 validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate_encoded, axis=1)) * 100
-                print("Validation Accuracy: {:.2f}%".format(validate_accuracy))
+                print(f"after {epoch + 1} epoch Validation Accuracy : {validate_accuracy}%")
 
     def predict(self, X):
         output = self.forward(X)
@@ -114,13 +110,35 @@ class NeuralNetwork2:
         return exps / np.sum(exps, axis=1, keepdims=True)
 
 
+def _pre_processing(X: np.ndarray, Y: np.ndarray):
+    X_reshaped = X.reshape((-1, 3, 32, 32))
+
+    # Flipping Images
+    flipped = np.flip(X_reshaped, axis=3)
+    flipped = flipped.reshape(X.shape[0], -1)
+
+    X_new = np.concatenate((X, flipped))
+    Y_new = np.concatenate((Y, Y))
+
+    # Resetting Pixels
+    pixels_num = int(X.shape[1] * 0.2)
+    indices_to_resete = np.random.choice(X_new.shape[1], size=pixels_num, replace=False)
+    reseted = X.copy()
+    reseted[:, indices_to_resete] = 0
+
+    X_new = np.concatenate((X, reseted))
+    Y_new = np.concatenate((Y_new, Y_new))
+
+    return X_new, Y_new
+
+
 def main():
     np.random.seed(10)
     # Set the hyperparameters
     input_size = X_train.shape[1]
     hidden_size = 64
-    output_size = num_classes
-    num_epochs = 20
+    output_size = 10
+    num_epochs = 60
     learning_rate = 0.002
     batch_size = 32
 
@@ -128,17 +146,19 @@ def main():
     model = NeuralNetwork2(input_size, hidden_size, output_size)
 
     # Train the neural network
-    model.train(X_train, y_train_encoded, num_epochs, learning_rate, batch_size)
+    train_x, train_y = _pre_processing(X_train, y_train_encoded)
+
+    model.train(train_x, train_y, num_epochs, learning_rate, batch_size)
 
     # Make predictions on the training set
     train_predictions = model.predict(X_train)
     train_accuracy = np.mean(train_predictions == np.argmax(y_train_encoded, axis=1)) * 100
-    print("Training Accuracy: {:.2f}%".format(train_accuracy))
+    print(f"Training Accuracy at the end {train_accuracy}%")
 
     # Make predictions on the validation set
     validate_predictions = model.predict(X_validate)
     validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate_encoded, axis=1)) * 100
-    print("Validation Accuracy: {:.2f}%".format(validate_accuracy))
+    print(f"Validation Accuracy: at the end {validate_accuracy}%")
 
 
 if __name__ == "__main__":
