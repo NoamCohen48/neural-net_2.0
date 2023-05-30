@@ -1,29 +1,24 @@
-# -*- coding: utf-8 -*-
-# @Author: Boyuan Jiang
-# @Date  : 11/30/18
-
+from dataclasses import dataclass, field
 import numpy as np
 
+@dataclass(slots=True)
 class Softmax_and_Loss(object):
-    """
-    Compute the softmax and loss together
-    """
+    pred: np.ndarray | None = field(init=False, default=None)
     def forward_and_backward(self, x, y):
-        """
-        forward and backward
-        :param x: final layer output, before softmax layer, [N,C]
-        :param y: ground truth, [N,]
-        :return:
-        """
         probs = np.exp(x - np.max(x, axis=1, keepdims=True))
         probs /= np.sum(probs, axis=1, keepdims=True)
+        self.pred = probs
         N = x.shape[0]
-        loss = -np.sum(np.log(probs[np.arange(N),y - 1]))/N
+        loss = -np.sum(np.log(probs[np.arange(N), y - 1])) / N
         dx = probs.copy()
-        dx[np.arange(N), y - 1]-=1.0
+        dx[np.arange(N), y - 1] -= 1.0
 
-        dx/=N   # for the loss is divided by N
+        dx /= N  # for the loss is divided by N
         return loss, dx
+
+    def backward(self):
+        pass
+
 
 if __name__ == '__main__':
     from utils.gradient_check import *
@@ -32,7 +27,9 @@ if __name__ == '__main__':
     def rel_error(x, y):
         """ returns relative error """
         return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
-    inp = np.random.randn(32,10)
+
+
+    inp = np.random.randn(32, 10)
     target = np.ones(32, dtype=int)
     dout = np.ones_like(inp)
 
