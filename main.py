@@ -7,13 +7,8 @@ import struct
 from glob import glob
 
 import csv_manager
-from layer.conv import Conv2D
-from layer.relu import ReLU
-from layer.linear import Linear
-from layer.max_pool import MaxPool
+from Layers import *
 from layer.softmax_loss import Softmax_and_Loss
-from layer.bn import BatchNorm2D, BatchNorm1D
-from layer.dropout import Dropout
 from utils.average import AverageMeter
 
 def load_mnist(path, kind='train'):
@@ -77,6 +72,7 @@ if __name__ == '__main__':
 
             predicted_labels = np.argmax(dx, axis=1)
             print(f"predicted: {predicted_labels}")
+            accurcy = np.sum(predicted_labels == label)
 
             # calculate gradient
             _, _, dx = fc2.gradient(dx, fc2_cache)
@@ -89,7 +85,7 @@ if __name__ == '__main__':
             fc2.backward(lr)
 
 
-            print(i,lr, loss)
+            print(i,lr, loss, accurcy/batch_size * 100)
 
             if False:
                 val_acc.reset()
