@@ -42,10 +42,10 @@ if __name__ == '__main__':
 
     batch_size = 200
     # Define network
-    fc1 = Linear(3072, 1024)
+    fc1 = FullyConnected(3072, 1024)
     relu4 = ReLU()
     dp = Dropout(0.9)
-    fc2 = Linear(1024, 10)
+    fc2 = FullyConnected(1024, 10)
     sf = Softmax_and_Loss()
     val_loss = AverageMeter()
     val_acc = AverageMeter()
@@ -63,11 +63,11 @@ if __name__ == '__main__':
             batch = images[i * batch_size:(i + 1) * batch_size]
             label = labels[i * batch_size:(i + 1) * batch_size]
             out = batch
-            out, fc1_cache = fc1.forward(out)
+            out = fc1.forward(out)
             out, relu4_cache = relu4.forward(out)
             # out, dp_cache = dp.forward(out)
 
-            out, fc2_cache = fc2.forward(out)
+            out = fc2.forward(out)
             loss, dx =  sf.forward_and_backward(out, np.array(label))
 
             predicted_labels = np.argmax(dx, axis=1)
@@ -75,14 +75,14 @@ if __name__ == '__main__':
             accurcy = np.sum(predicted_labels == label)
 
             # calculate gradient
-            _, _, dx = fc2.gradient(dx, fc2_cache)
+            dx = fc2.backward(dx)
 
             # dx = dp.gradient(dx, dp_cache)
             dx = relu4.gradient(dx, relu4_cache)
-            _,_,dx = fc1.gradient(dx, fc1_cache)
+            dx = fc1.backward(dx)
 
-            fc1.backward(lr)
-            fc2.backward(lr)
+            fc1.update(lr)
+            fc2.update(lr)
 
 
             print(i,lr, loss, accurcy/batch_size * 100)
