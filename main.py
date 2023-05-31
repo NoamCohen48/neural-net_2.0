@@ -1,5 +1,3 @@
-import random
-
 import numpy as np
 import pandas as pd
 
@@ -96,9 +94,8 @@ class NeuralNetwork2:
             X_shuffled = X[indices]
             y_shuffled = y[indices]
 
-            # Divide the data into mini-batches
-            num_batches = X.shape[0] // batch_size
             for batch_start in range(0, X.shape[0], batch_size):
+                # Divide the data into mini-batches
                 batch_end = batch_start + batch_size
                 X_batch = X_shuffled[batch_start:batch_end]
                 y_batch = y_shuffled[batch_start:batch_end]
@@ -121,7 +118,7 @@ class NeuralNetwork2:
                 print(f"After {epoch + 1} epochs, Validation Accuracy : {validate_accuracy}%")
 
                 # Calculate training accuracy on a random subset of 1000 different examples
-                random_indices = random.sample(range(X.shape[0]), 1000)
+                random_indices = np.random.choice(X.shape[0], size=1000)
                 X_train_subset = X[random_indices]
                 y_train_subset = y[random_indices]
                 train_predictions = self.predict(X_train_subset)
@@ -155,17 +152,17 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
 
     # Resetting Pixels
     pixels_num = int(X.shape[1] * 0.2)
-    X_reset = X.copy()
+    X_reset = X_new.copy()
     for i in range(X.shape[0]):
         indices_to_reset = np.random.choice(X.shape[1], size=pixels_num, replace=False)
         X_reset[i, indices_to_reset] = 0
 
     # Adding Gaussian Noise
-    noise = np.random.normal(loc=0, scale=noise_std, size=X.shape)
-    X_noisy = X + noise
+    noise = np.random.normal(loc=0, scale=noise_std, size=X_new.shape)
+    X_noisy = X_new + noise
 
     X_new = np.concatenate((X_new, X_reset, X_noisy))
-    Y_new = np.concatenate((Y_new, Y_new, Y))
+    Y_new = np.concatenate((Y_new, Y_new, Y_new))
 
     return X_new, Y_new
 
