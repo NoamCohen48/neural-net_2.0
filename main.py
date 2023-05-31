@@ -41,19 +41,26 @@ ActivationFunctionDerivative = sigmoid_derivative
 
 # Define the neural network model
 class NeuralNetwork2:
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, dropout_prob):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
+        self.dropout_prob = dropout_prob
 
         self.W1 = np.random.randn(self.input_size, self.hidden_size)
         self.b1 = np.zeros((1, self.hidden_size))
         self.W2 = np.random.randn(self.hidden_size, self.output_size)
         self.b2 = np.zeros((1, self.output_size))
 
-    def forward(self, X):
+    def forward(self, X, training):
         self.z1 = np.dot(X, self.W1) + self.b1
         self.a1 = ActivationFunction(self.z1)
+
+        # Apply dropout during training
+        if training:
+            dropout_mask = np.random.binomial(1, 1 - self.dropout_prob, size=self.a1.shape)
+            self.a1 *= dropout_mask / (1 - self.dropout_prob)
+
         self.z2 = np.dot(self.a1, self.W2) + self.b2
         self.a2 = self.softmax(self.z2)
         return self.a2
@@ -65,7 +72,11 @@ class NeuralNetwork2:
         dW2 = np.dot(self.a1.T, delta2)
         db2 = np.sum(delta2, axis=0, keepdims=True)
 
-        delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1)
+        # Backpropagate dropout mask
+        dropout_mask = np.random.binomial(1, 1 - self.dropout_prob, size=self.a1.shape)
+
+        delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask / (1 - self.dropout_prob)
+
         dW1 = np.dot(X.T, delta1)
         db1 = np.sum(delta1, axis=0, keepdims=True)
 
@@ -89,7 +100,7 @@ class NeuralNetwork2:
                 y_batch = y_shuffled[batch_start:batch_end]
 
                 # Forward pass
-                output = self.forward(X_batch)
+                output = self.forward(X_batch, True)
                 # print(np.argmax(output, axis=1))
 
                 # Backward pass
@@ -102,7 +113,7 @@ class NeuralNetwork2:
                 print(f"after {epoch + 1} epoch Validation Accuracy : {validate_accuracy}%")
 
     def predict(self, X):
-        output = self.forward(X)
+        output = self.forward(X, False)
         return np.argmax(output, axis=1)
 
     def softmax(self, x):
@@ -150,9 +161,10 @@ def main():
     num_epochs = 60
     learning_rate = 0.002
     batch_size = 32
+    dropout_prob = 0.1
 
     # Create the neural network model
-    model = NeuralNetwork2(input_size, hidden_size, output_size)
+    model = NeuralNetwork2(input_size, hidden_size, output_size, dropout_prob)
 
     # Train the neural network
     train_x, train_y = _pre_processing(X_train, y_train_encoded)
