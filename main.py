@@ -85,7 +85,9 @@ class NeuralNetwork2:
         self.W1 -= learning_rate * dW1
         self.b1 -= learning_rate * db1
 
-    def train(self, X, y, num_epochs, learning_rate, batch_size):
+    def train(self, X, y, num_epochs, initial_learning_rate, batch_size, decay_rate):
+        learning_rate = initial_learning_rate
+
         for epoch in range(num_epochs):
             # Shuffle the training data
             indices = np.random.permutation(X.shape[0])
@@ -106,8 +108,12 @@ class NeuralNetwork2:
                 # Backward pass
                 self.backward(X_batch, y_batch, output, learning_rate)
 
-            # Print progress every 100 epochs
-            if epoch % 5 == 0:
+            # Update the learning rate every 5 epochs
+            if (epoch + 1) % 5 == 0:
+                learning_rate *= decay_rate
+
+            # Print progress every 10 epochs
+            if (epoch + 1) % 10 == 0:
                 validate_predictions = self.predict(X_validate)
                 validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate_encoded, axis=1)) * 100
                 print(f"after {epoch + 1} epoch Validation Accuracy : {validate_accuracy}%")
@@ -156,10 +162,11 @@ def main():
     np.random.seed(10)
     # Set the hyperparameters
     input_size = X_train.shape[1]
-    hidden_size = 64
+    hidden_size = 512
     output_size = 10
     num_epochs = 60
-    learning_rate = 0.002
+    init_learning_rate = 0.05
+    learning_rate_decay = 0.9
     batch_size = 32
     dropout_prob = 0.1
 
@@ -169,7 +176,7 @@ def main():
     # Train the neural network
     train_x, train_y = _pre_processing(X_train, y_train_encoded)
 
-    model.train(train_x, train_y, num_epochs, learning_rate, batch_size)
+    model.train(train_x, train_y, num_epochs, init_learning_rate, batch_size, learning_rate_decay)
 
     # Make predictions on the training set
     train_predictions = model.predict(X_train)
