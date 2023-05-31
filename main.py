@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import pandas as pd
 
@@ -118,6 +120,16 @@ class NeuralNetwork2:
                 validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate_encoded, axis=1)) * 100
                 print(f"after {epoch + 1} epoch Validation Accuracy : {validate_accuracy}%")
 
+                # Calculate training accuracy on a random subset of 1000 different examples
+                random_indices = random.sample(range(X.shape[0]), 1000)
+                X_train_subset = X[random_indices]
+                y_train_subset = y[random_indices]
+                train_predictions = self.predict(X_train_subset)
+                train_accuracy = np.mean(train_predictions == np.argmax(y_train_subset, axis=1)) * 100
+                print(f"After {epoch + 1} epochs, Training Accuracy (Subset): {train_accuracy}%")
+
+
+
     def predict(self, X):
         output = self.forward(X, False)
         return np.argmax(output, axis=1)
@@ -149,10 +161,10 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
         X_reset[i, indices_to_reset] = 0
 
     # Adding Gaussian Noise
-    # noise = np.random.normal(loc=0, scale=noise_std, size=X.shape)
-    # X_noisy = X + noise
+    noise = np.random.normal(loc=0, scale=noise_std, size=X.shape)
+    X_noisy = X + noise
 
-    X_new = np.concatenate((X_new, X_reset))
+    X_new = np.concatenate((X_new, X_reset, X_noisy))
     Y_new = np.concatenate((Y_new, Y_new, Y))
 
     return X_new, Y_new
@@ -168,7 +180,7 @@ def main():
     init_learning_rate = 0.05
     learning_rate_decay = 0.9
     batch_size = 32
-    dropout_prob = 0.1
+    dropout_prob = 0.2
 
     # Create the neural network model
     model = NeuralNetwork2(input_size, hidden_size, output_size, dropout_prob)
