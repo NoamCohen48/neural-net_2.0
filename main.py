@@ -110,24 +110,33 @@ class NeuralNetwork2:
         return exps / np.sum(exps, axis=1, keepdims=True)
 
 
-def _pre_processing(X: np.ndarray, Y: np.ndarray):
+def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
     X_reshaped = X.reshape((-1, 3, 32, 32))
 
-    # Flipping Images
-    flipped = np.flip(X_reshaped, axis=3)
-    flipped = flipped.reshape(X.shape[0], -1)
+    # Flipping Images horizontally
+    horizontal_flipped = np.flip(X_reshaped, axis=3)
+    horizontal_flipped = horizontal_flipped.reshape(X.shape[0], -1)
 
-    X_new = np.concatenate((X, flipped))
-    Y_new = np.concatenate((Y, Y))
+    # Flipping Images vertically
+    vertically_flipped = np.flip(X_reshaped, axis=2)
+    vertically_flipped = vertically_flipped.reshape(X.shape[0], -1)
+
+    X_new = np.concatenate((X, horizontal_flipped, vertically_flipped))
+    Y_new = np.concatenate((Y, Y, Y))
 
     # Resetting Pixels
     pixels_num = int(X.shape[1] * 0.2)
-    indices_to_resete = np.random.choice(X_new.shape[1], size=pixels_num, replace=False)
-    reseted = X.copy()
-    reseted[:, indices_to_resete] = 0
+    X_reset = X.copy()
+    for i in range(X.shape[0]):
+        indices_to_reset = np.random.choice(X.shape[1], size=pixels_num, replace=False)
+        X_reset[i, indices_to_reset] = 0
 
-    X_new = np.concatenate((X, reseted))
-    Y_new = np.concatenate((Y_new, Y_new))
+    # Adding Gaussian Noise
+    # noise = np.random.normal(loc=0, scale=noise_std, size=X.shape)
+    # X_noisy = X + noise
+
+    X_new = np.concatenate((X_new, X_reset))
+    Y_new = np.concatenate((Y_new, Y_new, Y))
 
     return X_new, Y_new
 
