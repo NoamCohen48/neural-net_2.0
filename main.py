@@ -34,6 +34,11 @@ def RELU(x):
 def RELU_derivative(x):
     return np.where(x > 0, 1, 0)
 
+def leaky_RELU(x):
+    return np.maximum(x, 0.01 * x)
+
+def leaky_RELU_derivative(x):
+    return np.where(x > 0, 1, 0.01)
 
 ActivationFunction = sigmoid
 ActivationFunctionDerivative = sigmoid_derivative
@@ -41,11 +46,12 @@ ActivationFunctionDerivative = sigmoid_derivative
 
 # Define the neural network model
 class NeuralNetwork2:
-    def __init__(self, input_size, hidden_size, output_size, dropout_prob):
+    def __init__(self, input_size, hidden_size, output_size, dropout_prob, regularization):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.dropout_prob = dropout_prob
+        self.regularization = regularization
 
         self.W1 = np.random.randn(self.input_size, self.hidden_size)
         self.b1 = np.zeros((1, self.hidden_size))
@@ -66,10 +72,8 @@ class NeuralNetwork2:
         return self.a2
 
     def backward(self, X, y, output, learning_rate):
-        m = X.shape[0]
-
         delta2 = output - y
-        dW2 = np.dot(self.a1.T, delta2)
+        dW2 = np.dot(self.a1.T, delta2) + self.regularization * self.W2
         db2 = np.sum(delta2, axis=0, keepdims=True)
 
         # Backpropagate dropout mask
@@ -77,7 +81,7 @@ class NeuralNetwork2:
 
         delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask / (1 - self.dropout_prob)
 
-        dW1 = np.dot(X.T, delta1)
+        dW1 = np.dot(X.T, delta1) + self.regularization * self.W1
         db1 = np.sum(delta1, axis=0, keepdims=True)
 
         self.W2 -= learning_rate * dW2
@@ -176,11 +180,12 @@ def main():
     num_epochs = 60
     init_learning_rate = 0.05
     learning_rate_decay = 0.9
-    batch_size = 32
+    batch_size = 64
     dropout_prob = 0.2
+    regularization = 0
 
     # Create the neural network model
-    model = NeuralNetwork2(input_size, hidden_size, output_size, dropout_prob)
+    model = NeuralNetwork2(input_size, hidden_size, output_size, dropout_prob, regularization)
 
     # Train the neural network
     train_x, train_y = _pre_processing(X_train, y_train_encoded)
