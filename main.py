@@ -118,7 +118,7 @@ class NeuralNetwork2:
             if (epoch + 1) % 10 == 0:
                 validate_predictions = self.predict(X_validate)
                 validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate_encoded, axis=1)) * 100
-                print(f"after {epoch + 1} epoch Validation Accuracy : {validate_accuracy}%")
+                print(f"After {epoch + 1} epochs, Validation Accuracy : {validate_accuracy}%")
 
                 # Calculate training accuracy on a random subset of 1000 different examples
                 random_indices = random.sample(range(X.shape[0]), 1000)
@@ -126,7 +126,7 @@ class NeuralNetwork2:
                 y_train_subset = y[random_indices]
                 train_predictions = self.predict(X_train_subset)
                 train_accuracy = np.mean(train_predictions == np.argmax(y_train_subset, axis=1)) * 100
-                print(f"After {epoch + 1} epochs, Training Accuracy (Subset): {train_accuracy}%")
+                print(f"After {epoch + 1} epochs, Training Accuracy (Subset of 1000): {train_accuracy}%")
 
 
 
