@@ -89,7 +89,7 @@ class NeuralNetwork2:
         return self.a3
 
     def backward(self, X, y, output, learning_rate):
-        delta3 = output - y
+        delta3 = (output - y) / X.shape[0]
 
         dW3 = np.dot(self.a2.T, delta3) + self.regularization * self.W3
         db3 = np.sum(delta3, axis=0, keepdims=True)
@@ -168,6 +168,11 @@ class NeuralNetwork2:
 
 
 def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
+    norms = np.linalg.norm(X, axis=1)
+    # Divide each row by its norm
+    X = X / norms[:, np.newaxis]
+
+
     X_reshaped = X.reshape((-1, 3, 32, 32))
 
     # Flipping Images horizontally
