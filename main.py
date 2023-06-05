@@ -195,7 +195,7 @@ def main():
     input_size = X_train.shape[1]
     hidden_size = 256
     output_size = 10
-    num_epochs = 100
+    num_epochs = 1
     init_learning_rate = 0.05
     learning_rate_decay = 0.9
     batch_size = 32
@@ -223,7 +223,7 @@ def main():
     test_predictions = model.predict(X_validate)
     with open("test-results.txt", "w") as f:
         for pred in test_predictions:
-            f.write(str(pred + 1))
+            f.write(f"{pred + 1}\n")
     print("saved test results")
 
     with open("model.pickle", 'wb') as pickle_file:
