@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 import pandas as pd
 
@@ -34,8 +36,10 @@ def RELU(x):
 def RELU_derivative(x):
     return np.where(x > 0, 1, 0)
 
+
 def leaky_relu(x, alpha=0.01):
     return np.maximum(x, alpha * x)
+
 
 def leaky_relu_prime(x, alpha=0.01):
     return np.where(x >= 0, 1, alpha)
@@ -81,7 +85,8 @@ class NeuralNetwork2:
         # Backpropagate dropout mask
         dropout_mask = np.random.binomial(1, 1 - self.dropout_prob, size=self.a1.shape)
 
-        delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask / (1 - self.dropout_prob)
+        delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask / (
+                    1 - self.dropout_prob)
 
         dW1 = np.dot(X.T, delta1) / m
         db1 = np.sum(delta1, axis=0, keepdims=True) / m
@@ -131,9 +136,6 @@ class NeuralNetwork2:
                 print(f"After {epoch + 1} epochs, Training Accuracy (Subset of 1000): {train_accuracy}%")
                 print(f"After {epoch + 1} epochs, Validation Accuracy : {validate_accuracy}%")
 
-
-
-
     def predict(self, X):
         output = self.forward(X, False)
         return np.argmax(output, axis=1)
@@ -144,11 +146,6 @@ class NeuralNetwork2:
 
 
 def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
-    # Calculate the norm of each row
-    # norms = np.linalg.norm(X, axis=1)
-    # Divide each row by its norm
-    # X = X / norms[:, np.newaxis]
-
     min_vals = np.min(X, axis=1)
     max_vals = np.max(X, axis=1)
     # Normalize each image individually using min-max normalization
@@ -184,6 +181,13 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
     return X_new, Y_new
 
 
+def load_model():
+    with open("model.pickle", 'rb') as pickle_file:
+        model = pickle.load(pickle_file)
+    print("loaded from pickle")
+    return model
+
+
 def main():
     np.random.seed(10)
     np.seterr(all="raise")
@@ -217,9 +221,14 @@ def main():
 
     # Save predictions on the Test set
     test_predictions = model.predict(X_validate)
-    with open("test-results", "w") as f:
+    with open("test-results.txt", "w") as f:
         for pred in test_predictions:
             f.write(str(pred + 1))
+    print("saved test results")
+
+    with open("model.pickle", 'wb') as pickle_file:
+        pickle.dump(model, pickle_file)
+    print("saved pickle")
 
 
 if __name__ == "__main__":
