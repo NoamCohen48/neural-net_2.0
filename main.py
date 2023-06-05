@@ -34,9 +34,15 @@ def RELU(x):
 def RELU_derivative(x):
     return np.where(x > 0, 1, 0)
 
+def leaky_relu(x, alpha=0.01):
+    return np.maximum(x, alpha * x)
 
-ActivationFunction = sigmoid
-ActivationFunctionDerivative = sigmoid_derivative
+def leaky_relu_prime(x, alpha=0.01):
+    return np.where(x >= 0, 1, alpha)
+
+
+ActivationFunction = leaky_relu
+ActivationFunctionDerivative = leaky_relu_prime
 
 
 # Define the neural network model
@@ -47,9 +53,9 @@ class NeuralNetwork2:
         self.output_size = output_size
         self.dropout_prob = dropout_prob
 
-        self.W1 = np.random.randn(self.input_size, self.hidden_size)
+        self.W1 = np.random.randn(self.input_size, self.hidden_size) / np.sqrt(self.input_size)
         self.b1 = np.zeros((1, self.hidden_size))
-        self.W2 = np.random.randn(self.hidden_size, self.output_size)
+        self.W2 = np.random.randn(self.hidden_size, self.output_size) / np.sqrt(self.hidden_size)
         self.b2 = np.zeros((1, self.output_size))
 
     def forward(self, X, training):
@@ -69,16 +75,16 @@ class NeuralNetwork2:
         m = X.shape[0]
 
         delta2 = output - y
-        dW2 = np.dot(self.a1.T, delta2)
-        db2 = np.sum(delta2, axis=0, keepdims=True)
+        dW2 = np.dot(self.a1.T, delta2) / m
+        db2 = np.sum(delta2, axis=0, keepdims=True) / m
 
         # Backpropagate dropout mask
         dropout_mask = np.random.binomial(1, 1 - self.dropout_prob, size=self.a1.shape)
 
         delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask / (1 - self.dropout_prob)
 
-        dW1 = np.dot(X.T, delta1)
-        db1 = np.sum(delta1, axis=0, keepdims=True)
+        dW1 = np.dot(X.T, delta1) / m
+        db1 = np.sum(delta1, axis=0, keepdims=True) / m
 
         self.W2 -= learning_rate * dW2
         self.b2 -= learning_rate * db2
@@ -115,7 +121,6 @@ class NeuralNetwork2:
             if (epoch + 1) % 10 == 0:
                 validate_predictions = self.predict(X_validate)
                 validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate_encoded, axis=1)) * 100
-                print(f"After {epoch + 1} epochs, Validation Accuracy : {validate_accuracy}%")
 
                 # Calculate training accuracy on a random subset of 1000 different examples
                 random_indices = np.random.choice(X.shape[0], size=1000)
@@ -124,6 +129,8 @@ class NeuralNetwork2:
                 train_predictions = self.predict(X_train_subset)
                 train_accuracy = np.mean(train_predictions == np.argmax(y_train_subset, axis=1)) * 100
                 print(f"After {epoch + 1} epochs, Training Accuracy (Subset of 1000): {train_accuracy}%")
+                print(f"After {epoch + 1} epochs, Validation Accuracy : {validate_accuracy}%")
+
 
 
 
@@ -137,6 +144,16 @@ class NeuralNetwork2:
 
 
 def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
+    # Calculate the norm of each row
+    # norms = np.linalg.norm(X, axis=1)
+    # Divide each row by its norm
+    # X = X / norms[:, np.newaxis]
+
+    min_vals = np.min(X, axis=1)
+    max_vals = np.max(X, axis=1)
+    # Normalize each image individually using min-max normalization
+    X = (X - min_vals[:, np.newaxis]) / (max_vals - min_vals)[:, np.newaxis]
+
     X_reshaped = X.reshape((-1, 3, 32, 32))
 
     # Flipping Images horizontally
@@ -169,11 +186,12 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
 
 def main():
     np.random.seed(10)
+    np.seterr(all="raise")
     # Set the hyperparameters
     input_size = X_train.shape[1]
-    hidden_size = 512
+    hidden_size = 256
     output_size = 10
-    num_epochs = 60
+    num_epochs = 100
     init_learning_rate = 0.05
     learning_rate_decay = 0.9
     batch_size = 32
@@ -196,6 +214,12 @@ def main():
     validate_predictions = model.predict(X_validate)
     validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate_encoded, axis=1)) * 100
     print(f"Validation Accuracy: at the end {validate_accuracy}%")
+
+    # Save predictions on the Test set
+    test_predictions = model.predict(X_validate)
+    with open("test-results", "w") as f:
+        for pred in test_predictions:
+            f.write(str(pred + 1))
 
 
 if __name__ == "__main__":
