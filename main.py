@@ -145,7 +145,7 @@ class NeuralNetwork2:
         return exps / np.sum(exps, axis=1, keepdims=True)
 
 
-def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
+def _pre_processing(X: np.ndarray, Y: np.ndarray, reset_percentage: float = 0.2, noise_std: float = 0.1):
     min_vals = np.min(X, axis=1)
     max_vals = np.max(X, axis=1)
     # Normalize each image individually using min-max normalization
@@ -161,11 +161,15 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
     vertically_flipped = np.flip(X_reshaped, axis=2)
     vertically_flipped = vertically_flipped.reshape(X.shape[0], -1)
 
-    X_new = np.concatenate((X, horizontal_flipped, vertically_flipped))
-    Y_new = np.concatenate((Y, Y, Y))
+    # Flipping Images vertically and horizontally
+    v_h_flipped = np.flip(X_reshaped, axis=(2, 3))
+    v_h_flipped = v_h_flipped.reshape(X.shape[0], -1)
+
+    X_new = np.concatenate((X, horizontal_flipped, vertically_flipped, v_h_flipped))
+    Y_new = np.concatenate((Y, Y, Y, Y))
 
     # Resetting Pixels
-    pixels_num = int(X.shape[1] * 0.2)
+    pixels_num = int(X.shape[1] * reset_percentage)
     X_reset = X_new.copy()
     for i in range(X.shape[0]):
         indices_to_reset = np.random.choice(X.shape[1], size=pixels_num, replace=False)
@@ -195,11 +199,11 @@ def main():
     input_size = X_train.shape[1]
     hidden_size = 256
     output_size = 10
-    num_epochs = 1
+    num_epochs = 100
     init_learning_rate = 0.05
     learning_rate_decay = 0.9
     batch_size = 32
-    dropout_prob = 0.2
+    dropout_prob = 0.3
 
     # Create the neural network model
     model = NeuralNetwork2(input_size, hidden_size, output_size, dropout_prob)
