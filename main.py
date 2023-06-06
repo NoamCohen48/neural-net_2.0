@@ -3,6 +3,8 @@ import sys
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import tensorflow.keras.datasets.cifar10
+
 
 # Load the training and validation datasets
 train_data = pd.read_csv('data/train.csv', header=None)
@@ -13,6 +15,7 @@ X_train = train_data.iloc[:, 1:].values
 y_train = train_data.iloc[:, 0].values - 1
 X_validate = validate_data.iloc[:, 1:].values
 y_validate = validate_data.iloc[:, 0].values - 1
+(_, _), (X_test, y_test) = tensorflow.keras.datasets.cifar10.load_data()
 
 # y_train = y_train - 1
 # y_validate = y_validate - 1
@@ -20,6 +23,7 @@ y_validate = validate_data.iloc[:, 0].values - 1
 # Convert labels to one-hot encoding
 y_train_encoded = np.eye(10)[y_train]
 y_validate_encoded = np.eye(10)[y_validate]
+y_test_encoded = np.eye(10)[y_test]
 
 
 def sigmoid(x):
@@ -106,7 +110,7 @@ class NeuralNetwork2:
         dropout_mask1 = np.random.binomial(1, 1 - self.dropout_prob, size=self.a1.shape)
 
         delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask1 / (
-                    1 - self.dropout_prob)
+                1 - self.dropout_prob)
 
         dW1 = np.dot(X.T, delta1) + self.regularization * self.W1
         db1 = np.sum(delta1, axis=0, keepdims=True)
@@ -172,7 +176,6 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
     # Divide each row by its norm
     X = X / norms[:, np.newaxis]
 
-
     X_reshaped = X.reshape((-1, 3, 32, 32))
 
     # Flipping Images horizontally
@@ -235,6 +238,11 @@ def main():
     validate_predictions = model.predict(X_validate)
     validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate_encoded, axis=1)) * 100
     print(f"Validation Accuracy: at the end {validate_accuracy}%")
+
+    # Make predictions on the validation set
+    validate_predictions = model.predict(X_test)
+    test_accuracy = np.mean(validate_predictions == np.argmax(y_test_encoded, axis=1)) * 100
+    print(f"Test Accuracy: at the end {test_accuracy}%")
 
 
 if __name__ == "__main__":
