@@ -167,7 +167,12 @@ class NeuralNetwork2:
         plt.scatter(self.epochs, self.train_accuracy, color='red', s=50)
         plt.plot(self.epochs, self.train_accuracy)
         for x_val, y_val in zip(self.epochs, self.train_accuracy):
-            plt.text(x_val, y_val + 1, f'{y_val:.2f}', color='black', ha='center')
+            plt.text(x_val+0.5, y_val + 1, f'{y_val:.2f}', color='black', ha='center')
+
+        plt.scatter(self.epochs, self.valid_accuracy, color='red', s=50)
+        plt.plot(self.epochs, self.valid_accuracy)
+        for x_val, y_val in zip(self.epochs, self.valid_accuracy):
+            plt.text(x_val+0.5, y_val + 1, f'{y_val:.2f}', color='black', ha='center')
         plt.pause(0.1)
 
 
