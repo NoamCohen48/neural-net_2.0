@@ -54,9 +54,9 @@ class NeuralNetwork2:
         plt.ion()
         # Create a figure and axis for the plot
         fig, ax = plt.subplots()
-        ax.set_xlabel('X')
-        ax.set_ylabel('accuracy')
-        ax.set_title('Data Points')
+        ax.set_xlabel('epoch')
+        ax.set_ylabel('percentage')
+        ax.set_title('accuracy')
 
     def forward(self, X, training):
         self.z1 = np.dot(X, self.W1) + self.b1
@@ -256,9 +256,9 @@ def main():
     output_size = 10
     num_epochs = 100
     init_learning_rate = 0.05
-    learning_rate_decay = 0.9
+    learning_rate_decay = 0.8
     batch_size = 32
-    dropout_prob = 0.2
+    dropout_prob = 0.5
 
     X_train, y_train, X_validate, y_validate = load_data()
     X_train = normalize(X_train)
