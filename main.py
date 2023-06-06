@@ -250,9 +250,9 @@ def main():
     model = NeuralNetwork2(input_size, hidden_size, output_size, dropout_prob)
 
     # Train the neural network
-    # train_x, train_y = _pre_processing(X_train, y_train_encoded)
+    train_x, train_y = _pre_processing(X_train, y_train_encoded)
 
-    model.train(X_train[:100], y_train_encoded[:100], num_epochs, init_learning_rate, batch_size, learning_rate_decay)
+    model.train(train_x, train_y, num_epochs, init_learning_rate, batch_size, learning_rate_decay)
 
     # Make predictions on the training set
     train_predictions = model.predict(X_train)
