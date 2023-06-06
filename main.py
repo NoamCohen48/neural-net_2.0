@@ -1,5 +1,7 @@
 import sys
 
+import pickle
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -42,34 +44,30 @@ def RELU_derivative(x):
     return np.where(x > 0, 1, 0)
 
 
-def leaky_RELU(x):
-    return np.maximum(x, 0.01 * x)
+def leaky_relu(x, alpha=0.01):
+    return np.maximum(x, alpha * x)
 
 
-def leaky_RELU_derivative(x):
-    return np.where(x > 0, 1, 0.01)
+def leaky_relu_prime(x, alpha=0.01):
+    return np.where(x >= 0, 1, alpha)
 
 
-ActivationFunction = sigmoid
-ActivationFunctionDerivative = sigmoid_derivative
+ActivationFunction = leaky_relu
+ActivationFunctionDerivative = leaky_relu_prime
 
 
 # Define the neural network model
 class NeuralNetwork2:
-    def __init__(self, input_size, hidden_size1, hidden_size2, output_size, dropout_prob, regularization):
+    def __init__(self, input_size, hidden_size, output_size, dropout_prob):
         self.input_size = input_size
-        self.hidden_size1 = hidden_size1
-        self.hidden_size2 = hidden_size2
+        self.hidden_size = hidden_size
         self.output_size = output_size
         self.dropout_prob = dropout_prob
-        self.regularization = regularization
 
-        self.W1 = np.random.randn(self.input_size, self.hidden_size1)
-        self.b1 = np.zeros((1, self.hidden_size1))
-        self.W2 = np.random.randn(self.hidden_size1, self.hidden_size2)
-        self.b2 = np.zeros((1, self.hidden_size2))
-        self.W3 = np.random.randn(self.hidden_size2, self.output_size)
-        self.b3 = np.zeros((1, self.output_size))
+        self.W1 = np.random.randn(self.input_size, self.hidden_size) / np.sqrt(self.input_size)
+        self.b1 = np.zeros((1, self.hidden_size))
+        self.W2 = np.random.randn(self.hidden_size, self.output_size) / np.sqrt(self.hidden_size)
+        self.b2 = np.zeros((1, self.output_size))
 
     def forward(self, X, training):
         self.z1 = np.dot(X, self.W1) + self.b1
@@ -81,42 +79,25 @@ class NeuralNetwork2:
             self.a1 *= dropout_mask / (1 - self.dropout_prob)
 
         self.z2 = np.dot(self.a1, self.W2) + self.b2
-        self.a2 = ActivationFunction(self.z2)
-
-        # Apply dropout during training
-        if training:
-            dropout_mask = np.random.binomial(1, 1 - self.dropout_prob, size=self.a2.shape)
-            self.a2 *= dropout_mask / (1 - self.dropout_prob)
-
-        self.z3 = np.dot(self.a2, self.W3) + self.b3
-        self.a3 = self.softmax(self.z3)
-        return self.a3
+        self.a2 = self.softmax(self.z2)
+        return self.a2
 
     def backward(self, X, y, output, learning_rate):
-        delta3 = (output - y) / X.shape[0]
+        m = X.shape[0]
 
-        dW3 = np.dot(self.a2.T, delta3) + self.regularization * self.W3
-        db3 = np.sum(delta3, axis=0, keepdims=True)
-
-        # Backpropagate dropout mask
-        dropout_mask2 = np.random.binomial(1, 1 - self.dropout_prob, size=self.a2.shape)
-        delta2 = np.dot(delta3, self.W3.T) * ActivationFunctionDerivative(self.z2) * dropout_mask2 / (
-                1 - self.dropout_prob)
-
-        dW2 = np.dot(self.a1.T, delta2) + self.regularization * self.W2
-        db2 = np.sum(delta2, axis=0, keepdims=True)
+        delta2 = output - y
+        dW2 = np.dot(self.a1.T, delta2) / m
+        db2 = np.sum(delta2, axis=0, keepdims=True) / m
 
         # Backpropagate dropout mask
-        dropout_mask1 = np.random.binomial(1, 1 - self.dropout_prob, size=self.a1.shape)
+        dropout_mask = np.random.binomial(1, 1 - self.dropout_prob, size=self.a1.shape)
 
-        delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask1 / (
-                1 - self.dropout_prob)
+        delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask / (
+                    1 - self.dropout_prob)
 
-        dW1 = np.dot(X.T, delta1) + self.regularization * self.W1
-        db1 = np.sum(delta1, axis=0, keepdims=True)
+        dW1 = np.dot(X.T, delta1) / m
+        db1 = np.sum(delta1, axis=0, keepdims=True) / m
 
-        self.W3 -= learning_rate * dW3
-        self.b3 -= learning_rate * db3
         self.W2 -= learning_rate * dW2
         self.b2 -= learning_rate * db2
         self.W1 -= learning_rate * dW1
@@ -125,7 +106,7 @@ class NeuralNetwork2:
     def train(self, X, y, num_epochs, initial_learning_rate, batch_size, decay_rate):
         learning_rate = initial_learning_rate
 
-        for epoch in tqdm(range(num_epochs), file=sys.stdout):
+        for epoch in range(num_epochs):
             # Shuffle the training data
             indices = np.random.permutation(X.shape[0])
             X_shuffled = X[indices]
@@ -152,7 +133,6 @@ class NeuralNetwork2:
             if (epoch + 1) % 10 == 0:
                 validate_predictions = self.predict(X_validate)
                 validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate_encoded, axis=1)) * 100
-                print(f"After {epoch + 1} epochs, Validation Accuracy : {validate_accuracy}%")
 
                 # Calculate training accuracy on a random subset of 1000 different examples
                 random_indices = np.random.choice(X.shape[0], size=1000)
@@ -161,6 +141,7 @@ class NeuralNetwork2:
                 train_predictions = self.predict(X_train_subset)
                 train_accuracy = np.mean(train_predictions == np.argmax(y_train_subset, axis=1)) * 100
                 print(f"After {epoch + 1} epochs, Training Accuracy (Subset of 1000): {train_accuracy}%")
+                print(f"After {epoch + 1} epochs, Validation Accuracy : {validate_accuracy}%")
 
     def predict(self, X):
         output = self.forward(X, False)
@@ -171,10 +152,11 @@ class NeuralNetwork2:
         return exps / np.sum(exps, axis=1, keepdims=True)
 
 
-def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
-    norms = np.linalg.norm(X, axis=1)
-    # Divide each row by its norm
-    X = X / norms[:, np.newaxis]
+def _pre_processing(X: np.ndarray, Y: np.ndarray, reset_percentage: float = 0.2, noise_std: float = 0.1):
+    min_vals = np.min(X, axis=1)
+    max_vals = np.max(X, axis=1)
+    # Normalize each image individually using min-max normalization
+    X = (X - min_vals[:, np.newaxis]) / (max_vals - min_vals)[:, np.newaxis]
 
     X_reshaped = X.reshape((-1, 3, 32, 32))
 
@@ -186,11 +168,15 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
     vertically_flipped = np.flip(X_reshaped, axis=2)
     vertically_flipped = vertically_flipped.reshape(X.shape[0], -1)
 
-    X_new = np.concatenate((X, horizontal_flipped, vertically_flipped))
-    Y_new = np.concatenate((Y, Y, Y))
+    # Flipping Images vertically and horizontally
+    v_h_flipped = np.flip(X_reshaped, axis=(2, 3))
+    v_h_flipped = v_h_flipped.reshape(X.shape[0], -1)
+
+    X_new = np.concatenate((X, horizontal_flipped, vertically_flipped, v_h_flipped))
+    Y_new = np.concatenate((Y, Y, Y, Y))
 
     # Resetting Pixels
-    pixels_num = int(X.shape[1] * 0.2)
+    pixels_num = int(X.shape[1] * reset_percentage)
     X_reset = X_new.copy()
     for i in range(X.shape[0]):
         indices_to_reset = np.random.choice(X.shape[1], size=pixels_num, replace=False)
@@ -206,23 +192,28 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, noise_std: float = 0.1):
     return X_new, Y_new
 
 
+def load_model():
+    with open("model.pickle", 'rb') as pickle_file:
+        model = pickle.load(pickle_file)
+    print("loaded from pickle")
+    return model
+
+
 def main():
     np.random.seed(10)
-    np.seterr(invalid="raise")
+    np.seterr(all="raise")
     # Set the hyperparameters
     input_size = X_train.shape[1]
-    hidden_size1 = 512
-    hidden_size2 = 256
+    hidden_size = 256
     output_size = 10
-    num_epochs = 100
+    num_epochs = 60
     init_learning_rate = 0.05
     learning_rate_decay = 0.9
-    batch_size = 64
-    dropout_prob = 0.2
-    regularization = 0
+    batch_size = 32
+    dropout_prob = 0.3
 
     # Create the neural network model
-    model = NeuralNetwork2(input_size, hidden_size1, hidden_size2, output_size, dropout_prob, regularization)
+    model = NeuralNetwork2(input_size, hidden_size, output_size, dropout_prob)
 
     # Train the neural network
     train_x, train_y = _pre_processing(X_train, y_train_encoded)
@@ -243,6 +234,17 @@ def main():
     validate_predictions = model.predict(X_test)
     test_accuracy = np.mean(validate_predictions == np.argmax(y_test_encoded, axis=1)) * 100
     print(f"Test Accuracy: at the end {test_accuracy}%")
+
+    # Save predictions on the Test set
+    test_predictions = model.predict(X_validate)
+    with open("test-results.txt", "w") as f:
+        for pred in test_predictions:
+            f.write(f"{pred + 1}\n")
+    print("saved test results")
+
+    with open("model.pickle", 'wb') as pickle_file:
+        pickle.dump(model, pickle_file)
+    print("saved pickle")
 
 
 if __name__ == "__main__":
