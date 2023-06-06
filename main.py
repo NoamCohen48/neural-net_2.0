@@ -183,17 +183,17 @@ def show_image(x):
 
 
 def _pre_processing(X: np.ndarray, Y: np.ndarray, reset_percentage: float = 0.2, noise_std: float = 0.1):
-    # min_vals = np.min(X, axis=1)
-    # max_vals = np.max(X, axis=1)
-    # # Normalize each image individually using min-max normalization
-    # X = (X - min_vals[:, np.newaxis]) / (max_vals - min_vals)[:, np.newaxis]
+    min_vals = np.min(X, axis=1)
+    max_vals = np.max(X, axis=1)
+    # Normalize each image individually using min-max normalization
+    X = (X - min_vals[:, np.newaxis]) / (max_vals - min_vals)[:, np.newaxis]
 
     X_reshaped = X.reshape((-1, 3, 32, 32))
     show_image(X_reshaped[0])
 
-    mean = np.mean(X_reshaped, axis=(0, 2, 3), keepdims=True)
-    std = np.std(X_reshaped, axis=(0, 2, 3), keepdims=True)
-    X_reshaped = (X_reshaped - mean) / std
+    # mean = np.mean(X_reshaped, axis=(0, 2, 3), keepdims=True)
+    # std = np.std(X_reshaped, axis=(0, 2, 3), keepdims=True)
+    # X_reshaped = (X_reshaped - mean) / std
 
     # Flipping Images horizontally
     horizontal_flipped = np.flip(X_reshaped, axis=3)
@@ -204,11 +204,11 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, reset_percentage: float = 0.2,
     vertically_flipped = vertically_flipped.reshape(X.shape[0], -1)
 
     # Flipping Images vertically and horizontally
-    v_h_flipped = np.flip(X_reshaped, axis=(2, 3))
-    v_h_flipped = v_h_flipped.reshape(X.shape[0], -1)
+    # v_h_flipped = np.flip(X_reshaped, axis=(2, 3))
+    # v_h_flipped = v_h_flipped.reshape(X.shape[0], -1)
 
-    X_new = np.concatenate((X, horizontal_flipped, vertically_flipped, v_h_flipped))
-    Y_new = np.concatenate((Y, Y, Y, Y))
+    X_new = np.concatenate((X, horizontal_flipped, vertically_flipped))
+    Y_new = np.concatenate((Y, Y, Y))
 
     # Resetting Pixels
     pixels_num = int(X.shape[1] * reset_percentage)
