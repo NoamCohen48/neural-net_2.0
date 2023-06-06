@@ -284,7 +284,7 @@ def main():
     input_size = 3072
     hidden_size = 256
     output_size = 10
-    num_epochs = 3
+    num_epochs = 100
     init_learning_rate = 0.05
     learning_rate_decay = 0.8
     batch_size = 32
