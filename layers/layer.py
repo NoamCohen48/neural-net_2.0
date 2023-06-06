@@ -1,3 +1,0 @@
-
-class Layer:
-    pass
