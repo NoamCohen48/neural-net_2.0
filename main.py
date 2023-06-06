@@ -1,12 +1,13 @@
 import pickle
+import sys
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the training and validation datasets
-train_data = pd.read_csv('data/train.csv', header=None)
-validate_data = pd.read_csv('data/validate.csv', header=None)
+train_data = pd.read_csv(f"{sys.argv[1]}/train.csv", header=None)
+validate_data = pd.read_csv(f"{sys.argv[1]}/validate.csv", header=None)
 
 # Separate the features and labels
 X_train = train_data.iloc[:, 1:].values
