@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import tensorflow.keras.datasets.cifar10
 
-
 # Load the training and validation datasets
 train_data = pd.read_csv('data/train.csv', header=None)
 validate_data = pd.read_csv('data/validate.csv', header=None)
@@ -52,16 +51,6 @@ def leaky_relu_prime(x, alpha=0.01):
 
 ActivationFunction = leaky_relu
 ActivationFunctionDerivative = leaky_relu_prime
-
-
-def add_test_check():
-    (_, _), (X_test, y_test) = tensorflow.keras.datasets.cifar10.load_data()
-    X_test = X_test[:5000]
-    X_test = normalize(X_test)
-    y_test = y_test[:5000]
-    y_test = y_test.reshape(-1)
-    y_test_encoded = np.eye(10)[y_test]
-    return X_test, y_test_encoded
 
 
 # Define the neural network model
@@ -234,6 +223,17 @@ def normalize(X: np.ndarray):
     return X_reshaped.reshape((-1, 3072))
 
 
+def add_test_check(batch_size):
+    (_, _), (X_test, y_test) = tensorflow.keras.datasets.cifar10.load_data()
+    X_test = X_test[:batch_size]
+    X_test = np.transpose(X_test, (0, 3, 1, 2))
+    X_test = X_test.reshape(-1, 3072)
+    X_test = normalize(X_test)
+    y_test = y_test[:batch_size]
+    y_test = y_test.reshape(-1)
+    return X_test, y_test
+
+
 def data_augmentation(X: np.ndarray, Y: np.ndarray, reset_percentage: float = 0.2, noise_std: float = 0.1):
     X_reshaped = X.reshape((-1, 3, 32, 32))
 
@@ -284,7 +284,7 @@ def main():
     input_size = 3072
     hidden_size = 256
     output_size = 10
-    num_epochs = 60
+    num_epochs = 3
     init_learning_rate = 0.05
     learning_rate_decay = 0.9
     batch_size = 32
@@ -313,10 +313,10 @@ def main():
     validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate, axis=1)) * 100
     print(f"Validation Accuracy: at the end {validate_accuracy}%")
 
-    X_test, y_test_encoded = add_test_check()
+    X_test, y_test = add_test_check(5000)
     # Make predictions on the validation set
     test_predictions = model.predict(X_test)
-    test_accuracy = np.mean(test_predictions == np.argmax(y_test_encoded, axis=1)) * 100
+    test_accuracy = np.mean(test_predictions == y_test) * 100
     print(f"Test Accuracy: at the end {test_accuracy}%")
 
     # Save predictions on the Test set
