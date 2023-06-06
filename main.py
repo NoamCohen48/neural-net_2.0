@@ -172,6 +172,7 @@ class NeuralNetwork2:
 
 
 def show_image(x):
+    x = np.transpose(x, (1, 2, 0))
     plt.imshow(x)
     plt.title("RGB Image")
     plt.xlabel("Width")
@@ -187,23 +188,23 @@ def _pre_processing(X: np.ndarray, Y: np.ndarray, reset_percentage: float = 0.2,
     # # Normalize each image individually using min-max normalization
     # X = (X - min_vals[:, np.newaxis]) / (max_vals - min_vals)[:, np.newaxis]
 
-    X_reshaped = X.reshape((-1, 32, 32, 3))
+    X_reshaped = X.reshape((-1, 3, 32, 32))
     show_image(X_reshaped[0])
 
-    mean = np.mean(X_reshaped, axis=(0, 1, 2), keepdims=True)
-    std = np.std(X_reshaped, axis=(0, 1, 2), keepdims=True)
+    mean = np.mean(X_reshaped, axis=(0, 2, 3), keepdims=True)
+    std = np.std(X_reshaped, axis=(0, 2, 3), keepdims=True)
     X_reshaped = (X_reshaped - mean) / std
 
     # Flipping Images horizontally
-    horizontal_flipped = np.flip(X_reshaped, axis=2)
+    horizontal_flipped = np.flip(X_reshaped, axis=3)
     horizontal_flipped = horizontal_flipped.reshape(X.shape[0], -1)
 
     # Flipping Images vertically
-    vertically_flipped = np.flip(X_reshaped, axis=1)
+    vertically_flipped = np.flip(X_reshaped, axis=2)
     vertically_flipped = vertically_flipped.reshape(X.shape[0], -1)
 
     # Flipping Images vertically and horizontally
-    v_h_flipped = np.flip(X_reshaped, axis=(1, 2))
+    v_h_flipped = np.flip(X_reshaped, axis=(2, 3))
     v_h_flipped = v_h_flipped.reshape(X.shape[0], -1)
 
     X_new = np.concatenate((X, horizontal_flipped, vertically_flipped, v_h_flipped))
