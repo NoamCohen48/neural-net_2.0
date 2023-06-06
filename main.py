@@ -42,14 +42,27 @@ class NeuralNetwork2:
         self.output_size = output_size
         self.dropout_prob = dropout_prob
 
-        self.W1 = np.random.randn(self.input_size, self.hidden_size) / np.sqrt(self.input_size)
+        self.W1 = np.random.randn(self.input_size, self.hidden_size) / np.sqrt(2 * self.input_size)
         self.b1 = np.zeros((1, self.hidden_size))
-        self.W2 = np.random.randn(self.hidden_size, self.output_size) / np.sqrt(self.hidden_size)
+        self.W2 = np.random.randn(self.hidden_size, self.output_size) / np.sqrt(2 * self.hidden_size)
         self.b2 = np.zeros((1, self.output_size))
 
         self.train_accuracy = []
         self.valid_accuracy = []
         self.epochs = []
+
+        self.m_W1 = np.zeros_like(self.W1)
+        self.v_W1 = np.zeros_like(self.W1)
+        self.m_b1 = np.zeros_like(self.b1)
+        self.v_b1 = np.zeros_like(self.b1)
+        self.m_W2 = np.zeros_like(self.W2)
+        self.v_W2 = np.zeros_like(self.W2)
+        self.m_b2 = np.zeros_like(self.b2)
+        self.v_b2 = np.zeros_like(self.b2)
+
+        self.beta1 = 0.9
+        self.beta2 = 0.999
+        self.epsilon = 1e-8
 
         plt.ion()
         # Create a figure and axis for the plot
@@ -71,7 +84,7 @@ class NeuralNetwork2:
         self.a2 = self.softmax(self.z2)
         return self.a2
 
-    def backward(self, X, y, output, learning_rate):
+    def backward(self, X, y, output, learning_rate, epoch):
         m = X.shape[0]
 
         delta2 = output - y
@@ -87,10 +100,31 @@ class NeuralNetwork2:
         dW1 = np.dot(X.T, delta1) / m
         db1 = np.sum(delta1, axis=0, keepdims=True) / m
 
-        self.W2 -= learning_rate * dW2
-        self.b2 -= learning_rate * db2
-        self.W1 -= learning_rate * dW1
-        self.b1 -= learning_rate * db1
+        # ADAM optimizer updates
+        self.m_W1 = self.beta1 * self.m_W1 + (1 - self.beta1) * dW1
+        self.v_W1 = self.beta2 * self.v_W1 + (1 - self.beta2) * (dW1 ** 2)
+        self.m_b1 = self.beta1 * self.m_b1 + (1 - self.beta1) * db1
+        self.v_b1 = self.beta2 * self.v_b1 + (1 - self.beta2) * (db1 ** 2)
+
+        self.m_W2 = self.beta1 * self.m_W2 + (1 - self.beta1) * dW2
+        self.v_W2 = self.beta2 * self.v_W2 + (1 - self.beta2) * (dW2 ** 2)
+        self.m_b2 = self.beta1 * self.m_b2 + (1 - self.beta1) * db2
+        self.v_b2 = self.beta2 * self.v_b2 + (1 - self.beta2) * (db2 ** 2)
+
+        m_W1_corrected = self.m_W1 / (1 - self.beta1 ** (epoch + 1))
+        v_W1_corrected = self.v_W1 / (1 - self.beta2 ** (epoch + 1))
+        m_b1_corrected = self.m_b1 / (1 - self.beta1 ** (epoch + 1))
+        v_b1_corrected = self.v_b1 / (1 - self.beta2 ** (epoch + 1))
+
+        m_W2_corrected = self.m_W2 / (1 - self.beta1 ** (epoch + 1))
+        v_W2_corrected = self.v_W2 / (1 - self.beta2 ** (epoch + 1))
+        m_b2_corrected = self.m_b2 / (1 - self.beta1 ** (epoch + 1))
+        v_b2_corrected = self.v_b2 / (1 - self.beta2 ** (epoch + 1))
+
+        self.W1 -= learning_rate * m_W1_corrected / (np.sqrt(v_W1_corrected + self.epsilon))
+        self.b1 -= learning_rate * m_b1_corrected / (np.sqrt(v_b1_corrected + self.epsilon))
+        self.W2 -= learning_rate * m_W2_corrected / (np.sqrt(v_W2_corrected + self.epsilon))
+        self.b2 -= learning_rate * m_b2_corrected / (np.sqrt(v_b2_corrected + self.epsilon))
 
     def train(self, X_train, Y_train, X_valid, Y_valid, num_epochs, initial_learning_rate, batch_size, decay_rate):
         learning_rate = initial_learning_rate
@@ -112,7 +146,7 @@ class NeuralNetwork2:
                 # print(np.argmax(output, axis=1))
 
                 # Backward pass
-                self.backward(X_batch, y_batch, output, learning_rate)
+                self.backward(X_batch, y_batch, output, learning_rate, epoch)
 
             # Update the learning rate every 5 epochs
             if (epoch + 1) % 5 == 0:
@@ -255,10 +289,10 @@ def main():
     hidden_size = 256
     output_size = 10
     num_epochs = 100
-    init_learning_rate = 0.05
-    learning_rate_decay = 0.8
+    init_learning_rate = 0.005
+    learning_rate_decay = 1
     batch_size = 32
-    dropout_prob = 0.5
+    dropout_prob = 0.4
 
     X_train, y_train, X_validate, y_validate = load_data()
     X_train = normalize(X_train)
