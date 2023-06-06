@@ -244,7 +244,7 @@ def main():
     init_learning_rate = 0.05
     learning_rate_decay = 0.9
     batch_size = 32
-    dropout_prob = 0.3
+    dropout_prob = 0.2
 
     # Create the neural network model
     model = NeuralNetwork2(input_size, hidden_size, output_size, dropout_prob)
