@@ -17,7 +17,6 @@ X_train = train_data.iloc[:, 1:].values
 y_train = train_data.iloc[:, 0].values - 1
 X_validate = validate_data.iloc[:, 1:].values
 y_validate = validate_data.iloc[:, 0].values - 1
-(_, _), (X_test, y_test) = tensorflow.keras.datasets.cifar10.load_data()
 
 # y_train = y_train - 1
 # y_validate = y_validate - 1
@@ -25,7 +24,6 @@ y_validate = validate_data.iloc[:, 0].values - 1
 # Convert labels to one-hot encoding
 y_train_encoded = np.eye(10)[y_train]
 y_validate_encoded = np.eye(10)[y_validate]
-y_test_encoded = np.eye(10)[y_test]
 
 
 def sigmoid(x):
@@ -54,6 +52,16 @@ def leaky_relu_prime(x, alpha=0.01):
 
 ActivationFunction = leaky_relu
 ActivationFunctionDerivative = leaky_relu_prime
+
+
+def add_test_check():
+    (_, _), (X_test, y_test) = tensorflow.keras.datasets.cifar10.load_data()
+    X_test = X_test[:5000]
+    X_test = normalize(X_test)
+    y_test = y_test[:5000]
+    y_test = y_test.reshape(-1)
+    y_test_encoded = np.eye(10)[y_test]
+    return X_test, y_test_encoded
 
 
 # Define the neural network model
@@ -276,7 +284,7 @@ def main():
     input_size = 3072
     hidden_size = 256
     output_size = 10
-    num_epochs = 100
+    num_epochs = 60
     init_learning_rate = 0.05
     learning_rate_decay = 0.9
     batch_size = 32
@@ -305,9 +313,10 @@ def main():
     validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate, axis=1)) * 100
     print(f"Validation Accuracy: at the end {validate_accuracy}%")
 
+    X_test, y_test_encoded = add_test_check()
     # Make predictions on the validation set
-    validate_predictions = model.predict(X_test)
-    test_accuracy = np.mean(validate_predictions == np.argmax(y_test_encoded, axis=1)) * 100
+    test_predictions = model.predict(X_test)
+    test_accuracy = np.mean(test_predictions == np.argmax(y_test_encoded, axis=1)) * 100
     print(f"Test Accuracy: at the end {test_accuracy}%")
 
     # Save predictions on the Test set
