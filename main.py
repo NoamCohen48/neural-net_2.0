@@ -4,25 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 import tensorflow.keras.datasets.cifar10
-
-# Load the training and validation datasets
-train_data = pd.read_csv('data/train.csv', header=None)
-validate_data = pd.read_csv('data/validate.csv', header=None)
-
-# Separate the features and labels
-X_train = train_data.iloc[:, 1:].values
-y_train = train_data.iloc[:, 0].values - 1
-X_validate = validate_data.iloc[:, 1:].values
-y_validate = validate_data.iloc[:, 0].values - 1
-
-# y_train = y_train - 1
-# y_validate = y_validate - 1
-
-# Convert labels to one-hot encoding
-y_train_encoded = np.eye(10)[y_train]
-y_validate_encoded = np.eye(10)[y_validate]
 
 
 def sigmoid(x):
@@ -54,7 +36,7 @@ ActivationFunctionDerivative = leaky_relu_prime
 
 
 # Define the neural network model
-class NeuralNetwork2:
+class NeuralNetwork:
     def __init__(self, input_size, hidden_size, output_size, dropout_prob):
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -93,18 +75,18 @@ class NeuralNetwork2:
     def backward(self, X, y, output, learning_rate):
         m = X.shape[0]
 
-        delta2 = output - y
-        dW2 = np.dot(self.a1.T, delta2) / m
-        db2 = np.sum(delta2, axis=0, keepdims=True) / m
+        d2 = output - y
+        dW2 = np.dot(self.a1.T, d2) / m
+        db2 = np.sum(d2, axis=0, keepdims=True) / m
 
         # Backpropagation dropout mask
         dropout_mask = np.random.binomial(1, 1 - self.dropout_prob, size=self.a1.shape)
 
-        delta1 = np.dot(delta2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask / (
+        d1 = np.dot(d2, self.W2.T) * ActivationFunctionDerivative(self.z1) * dropout_mask / (
                 1 - self.dropout_prob)
 
-        dW1 = np.dot(X.T, delta1) / m
-        db1 = np.sum(delta1, axis=0, keepdims=True) / m
+        dW1 = np.dot(X.T, d1) / m
+        db1 = np.sum(d1, axis=0, keepdims=True) / m
 
         self.W2 -= learning_rate * dW2
         self.b2 -= learning_rate * db2
@@ -191,22 +173,18 @@ def show_image(x):
     plt.show()
 
 
-def load_data():
+def load_data(file):
     # Load the training and validation datasets
-    train_data = pd.read_csv(f"{sys.argv[1]}/train.csv", header=None)
-    validate_data = pd.read_csv(f"{sys.argv[1]}/validate.csv", header=None)
+    train_data = pd.read_csv(f"{sys.argv[1]}/{file}.csv", header=None)
 
     # Separate the features and labels
     X_train = train_data.iloc[:, 1:].values
     y_train = train_data.iloc[:, 0].values - 1
-    X_validate = validate_data.iloc[:, 1:].values
-    y_validate = validate_data.iloc[:, 0].values - 1
 
     # Convert labels to one-hot encoding
     y_train_encoded = np.eye(10)[y_train]
-    y_validate_encoded = np.eye(10)[y_validate]
 
-    return X_train, y_train_encoded, X_validate, y_validate_encoded
+    return X_train, y_train_encoded
 
 
 def normalize(X: np.ndarray):
@@ -223,7 +201,7 @@ def normalize(X: np.ndarray):
     return X_reshaped.reshape((-1, 3072))
 
 
-def add_test_check(batch_size):
+def load_CIFAR(batch_size):
     (_, _), (X_test, y_test) = tensorflow.keras.datasets.cifar10.load_data()
     X_test = X_test[:batch_size]
     X_test = np.transpose(X_test, (0, 3, 1, 2))
@@ -276,26 +254,34 @@ def load_model():
     return model
 
 
-def main():
+def accuracy2(model: NeuralNetwork, X: np.ndarray, Y: np.ndarray, name: str):
+    # Make predictions on the training set
+    predictions = model.predict(X)
+    accuracy = np.mean(predictions == np.argmax(Y, axis=1)) * 100
+    print(f"{name} Accuracy at the end {accuracy}%")
+
+
+def create_and_train():
     np.random.seed(10)
     np.seterr(all="raise")
 
     # Set the hyperparameters
     input_size = 3072
-    hidden_size = 256
+    hidden_size = 512
     output_size = 10
-    num_epochs = 100
+    num_epochs = 150
     init_learning_rate = 0.05
-    learning_rate_decay = 0.8
+    learning_rate_decay = 0.85
     batch_size = 32
     dropout_prob = 0.5
 
-    X_train, y_train, X_validate, y_validate = load_data()
+    X_train, y_train = load_data("train")
+    X_validate, y_validate = load_data("validate")
     X_train = normalize(X_train)
     X_validate = normalize(X_validate)
 
     # Create the neural network model
-    model = NeuralNetwork2(input_size, hidden_size, output_size, dropout_prob)
+    model = NeuralNetwork(input_size, hidden_size, output_size, dropout_prob)
 
     # Train the neural network
     train_x, train_y = data_augmentation(X_train, y_train)
@@ -304,32 +290,37 @@ def main():
                 num_epochs, init_learning_rate, batch_size, learning_rate_decay)
 
     # Make predictions on the training set
-    train_predictions = model.predict(X_train)
-    train_accuracy = np.mean(train_predictions == np.argmax(y_train, axis=1)) * 100
-    print(f"Training Accuracy at the end {train_accuracy}%")
+    accuracy2(model, X_train, y_train, "Training")
 
     # Make predictions on the validation set
-    validate_predictions = model.predict(X_validate)
-    validate_accuracy = np.mean(validate_predictions == np.argmax(y_validate, axis=1)) * 100
-    print(f"Validation Accuracy: at the end {validate_accuracy}%")
+    accuracy2(model, X_validate, y_validate, "Validation")
 
-    X_test, y_test = add_test_check(5000)
-    # Make predictions on the validation set
-    test_predictions = model.predict(X_test)
-    test_accuracy = np.mean(test_predictions == y_test) * 100
-    print(f"Test Accuracy: at the end {test_accuracy}%")
+    # makes prediction on CIFAR
+    X_CIFAR, y_CIFAR = load_CIFAR(5000)
+    X_CIFAR = normalize(X_CIFAR)
+    predictions = model.predict(X_CIFAR)
+    accuracy = np.mean(predictions == y_CIFAR) * 100
+    print(f"CIFAR Accuracy at the end {accuracy}%")
 
-    # Save predictions on the Test set
-    test_predictions = model.predict(X_validate)
-    with open("test-results.txt", "w") as f:
-        for pred in test_predictions:
-            f.write(f"{pred + 1}\n")
-    print("saved test results")
-
+    # save model
     with open("model.pickle", 'wb') as pickle_file:
         pickle.dump(model, pickle_file)
     print("saved pickle")
 
 
+def load_and_predict():
+    model: NeuralNetwork = load_model()
+    train_data = pd.read_csv(f"{sys.argv[1]}/test.csv", header=None)
+    # Separate the features and labels
+    X_test = train_data.iloc[:, 1:].values
+    X_test = normalize(X_test)
+    y_predicted = model.predict(X_test)
+    with open("test-results.txt", "w") as f:
+        for pred in y_predicted:
+            f.write(f"{pred + 1}\n")
+    print("saved test results")
+
+
 if __name__ == "__main__":
-    main()
+    create_and_train()
+    load_and_predict()
