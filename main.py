@@ -1,5 +1,6 @@
 import pickle
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -310,7 +311,12 @@ def create_and_train():
 
 def load_and_predict():
     model: NeuralNetwork = load_model()
-    train_data = pd.read_csv(f"{sys.argv[1]}/test.csv", header=None)
+    train_data = pd.read_csv(Path(sys.argv[1], "test.csv"), header=None)
+
+    X_validate, y_validate = load_data("validate")
+    X_validate = normalize(X_validate)
+    accuracy2(model, X_validate, y_validate, "Validation")
+
     # Separate the features and labels
     X_test = train_data.iloc[:, 1:].values
     X_test = normalize(X_test)
@@ -322,5 +328,12 @@ def load_and_predict():
 
 
 if __name__ == "__main__":
-    create_and_train()
-    load_and_predict()
+    if sys.argv[2] == "1":
+        create_and_train()
+    elif sys.argv[2] == "2":
+        load_and_predict()
+    elif sys.argv[2] == "3":
+        create_and_train()
+        load_and_predict()
+    else:
+        print("enter second argument 1/2/3 = train/load/both")
